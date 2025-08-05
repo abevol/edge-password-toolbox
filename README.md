@@ -2,6 +2,8 @@
 
 一个简单但实用的网页工具，用于在 Microsoft Edge 和 Bitwarden 之间转换和对比 CSV 格式的密码文件。
 
+🌐 在线使用：[https://abevol.github.io/edge-password-toolbox/](https://abevol.github.io/edge-password-toolbox/)
+
 ## 功能特点
 
 ### 1. 格式转换
