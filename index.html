@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Convert and compare password files between Microsoft Edge and Bitwarden | 在 Microsoft Edge 和 Bitwarden 之间转换和对比密码文件">
+    <meta name="keywords" content="Edge, Bitwarden, password manager, password conversion, password comparison, 密码管理器, 密码转换, 密码对比">
+    <meta name="robots" content="index, follow">
+    <meta property="og:title" content="Edge Password Toolbox | Edge 密码工具箱">
+    <meta property="og:description" content="Convert and compare password files between Microsoft Edge and Bitwarden | 在 Microsoft Edge 和 Bitwarden 之间转换和对比密码文件">
+    <meta property="og:type" content="website">
+    <title data-i18n="title">Edge Password Toolbox | Edge 密码工具箱</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+        }
+        select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        input[type="file"] {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #result, #compareResult {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            display: none;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            border-bottom: none;
+            margin-bottom: -1px;
+            background-color: transparent;
+            color: #666;
+        }
+        .tab.active {
+            border-color: #ddd;
+            border-bottom-color: white;
+            background-color: white;
+            color: #333;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ffeeba;
+            border-radius: 4px;
+        }
+        .warning-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .tab-description {
+            background-color: #f8f9fa;
+            padding: 12px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            color: #666;
+            line-height: 1.5;
+        }
+        .security-notice {
+            color: #2e7d32;
+            padding: 12px;
+            margin: 10px 0 20px;
+            border-radius: 4px;
+            background-color: #e8f5e9;
+            text-align: center;
+            font-weight: 500;
+        }
+        .security-notice::before {
+            content: '🛡️';
+            margin-right: 8px;
+        }
+        .file-label {
+            color: #333;
+            margin-top: 15px;
+            display: block;
+        }
+        .language-selector {
+            display: inline-flex;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            padding: 2px;
+        }
+        .language-selector input[type="radio"] {
+            display: none;
+        }
+        .language-selector label {
+            padding: 6px 16px;
+            color: #666;
+            cursor: pointer;
+            border-radius: 3px;
+            transition: all 0.2s ease;
+            margin: 0;
+            display: block;
+        }
+        .language-selector label:hover {
+            color: #333;
+        }
+        .language-selector input[type="radio"]:checked + label {
+            background: white;
+            color: #333;
+            font-weight: 500;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="language-selector">
+            <input type="radio" name="language" id="lang-zh" value="zh" checked onchange="switchLanguage('zh')">
+            <label for="lang-zh">中文</label>
+            <input type="radio" name="language" id="lang-en" value="en" onchange="switchLanguage('en')">
+            <label for="lang-en">English</label>
+        </div>
+        <h1 data-i18n="title"></h1>
+        <div class="security-notice" data-i18n="security_notice"></div>
+        
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('convert')" data-i18n="tabs.convert"></div>
+            <div class="tab" onclick="switchTab('compare')" data-i18n="tabs.compare"></div>
+        </div>
+
+        <div id="convertTab" class="tab-content active">
+            <div class="tab-description" data-i18n="convert.description"></div>
+            <div class="form-group">
+                <label for="sourceFormat" data-i18n="convert.sourceFormat"></label>
+                <select id="sourceFormat">
+                    <option value="bitwarden">Bitwarden</option>
+                    <option value="edge">Microsoft Edge</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="csvFile" data-i18n="convert.selectFile"></label>
+                <input type="file" id="csvFile" accept=".csv">
+            </div>
+            <button onclick="convertFile()" data-i18n="convert.convert"></button>
+            <div id="result"></div>
+        </div>
+
+        <div id="compareTab" class="tab-content">
+            <div class="tab-description" data-i18n="compare.description"></div>
+            <div class="form-group">
+                <label class="file-label" data-i18n="compare.file1"></label>
+                <select id="format1">
+                    <option value="bitwarden" selected>Bitwarden</option>
+                    <option value="edge">Microsoft Edge</option>
+                </select>
+                <input type="file" id="csvFile1" accept=".csv">
+            </div>
+            <div class="form-group">
+                <label class="file-label" data-i18n="compare.file2"></label>
+                <select id="format2">
+                    <option value="bitwarden">Bitwarden</option>
+                    <option value="edge" selected>Microsoft Edge</option>
+                </select>
+                <input type="file" id="csvFile2" accept=".csv">
+            </div>
+            <button onclick="compareFiles()" data-i18n="compare.compare"></button>
+            <div id="compareResult"></div>
+        </div>
+    </div>
+
+    <script>
+        // 集中管理所有翻译文本
+        const i18n = {
+            zh: {
+                title: 'Edge 密码工具箱',
+                tabs: {
+                    convert: '格式转换',
+                    compare: '密码对比'
+                },
+                security_notice: '纯前端实现，所有数据处理在本地完成，无需上传到服务器，安全可靠。',
+                convert: {
+                    description: '将 CSV 密码文件在不同平台格式之间进行转换。目前支持在 Bitwarden 和 Microsoft Edge 之间互相转换。',
+                    sourceFormat: '源文件平台格式：',
+                    selectFile: '选择密码文件：',
+                    convert: '转换'
+                },
+                compare: {
+                    description: '对比两个不同的 CSV 密码文件，找出密码不一致的记录。可以对比不同平台格式的密码文件，方便检查密码是否可以被导入到另一个平台而不引起冲突。',
+                    file1: '文件 1：',
+                    file2: '文件 2：',
+                    compare: '对比',
+                    noMismatch: '没有发现密码不匹配的记录。',
+                    foundMismatch: '发现以下密码不匹配：',
+                    username: '用户名',
+                    record: '记录',
+                    name: '名称',
+                    password: '密码'
+                },
+                messages: {
+                    selectFile: '请选择一个CSV文件',
+                    selectFiles: '请选择两个要对比的文件',
+                    compareError: '对比文件时出错: '
+                }
+            },
+            en: {
+                title: 'Edge Password Toolbox',
+                security_notice: 'Pure frontend implementation, all data processing is done locally, no server upload required, secure and reliable.',
+                tabs: {
+                    convert: 'Format Conversion',
+                    compare: 'Password Comparison'
+                },
+                convert: {
+                    description: 'Convert CSV password files between different platforms. Currently supports conversion between Bitwarden and Microsoft Edge.',
+                    sourceFormat: 'Source Platform Format:',
+                    selectFile: 'Select Password File:',
+                    convert: 'Convert'
+                },
+                compare: {
+                    description: 'Compare two different CSV password files to find records with inconsistent passwords. You can compare files in different platforms to check if passwords can be imported into another platform without conflicts.',
+                    file1: 'File 1:',
+                    file2: 'File 2:',
+                    compare: 'Compare',
+                    noMismatch: 'No password mismatches found.',
+                    foundMismatch: 'Found the following password mismatches:',
+                    username: 'Username',
+                    record: 'Record',
+                    name: 'Name',
+                    password: 'Password'
+                },
+                messages: {
+                    selectFile: 'Please select a CSV file',
+                    selectFiles: 'Please select two files to compare',
+                    compareError: 'Error comparing files: '
+                }
+            }
+        };
+
+        // 获取翻译文本的辅助函数
+        function t(key, params = {}) {
+            const keys = key.split('.');
+            let value = i18n[currentLanguage];
+            
+            for (const k of keys) {
+                value = value[k];
+                if (value === undefined) {
+                    console.warn(`Translation key not found: ${key}`);
+                    return key;
+                }
+            }
+
+            // 支持模板字符串替换
+            return value.replace(/\${(\w+)}/g, (_, param) => params[param] || '');
+        }
+
+        // 从 localStorage 获取保存的语言设置
+        let currentLanguage = localStorage.getItem('language') || 'zh';
+
+        function switchLanguage(lang) {
+            currentLanguage = lang;
+            localStorage.setItem('language', currentLanguage);
+            document.documentElement.lang = currentLanguage === 'zh' ? 'zh-CN' : 'en';
+            
+            // 更新单选框状态
+            document.querySelectorAll('input[name="language"]').forEach(radio => {
+                radio.checked = radio.value === currentLanguage;
+            });
+            
+            updateLanguage();
+        }
+
+        function updateLanguage() {
+            // 更新所有带有 data-i18n 属性的元素
+            document.querySelectorAll('[data-i18n]').forEach(element => {
+                const key = element.getAttribute('data-i18n');
+                if (element.tagName.toLowerCase() === 'title') {
+                    // 对于 title 标签，同时更新 document.title
+                    const text = t(key);
+                    element.textContent = text;
+                    document.title = text;
+                } else {
+                    element.textContent = t(key);
+                }
+            });
+        }
+
+        // 页面加载完成后初始化语言
+        document.addEventListener('DOMContentLoaded', () => {
+            // 根据保存的语言设置初始化单选框
+            document.querySelectorAll('input[name="language"]').forEach(radio => {
+                radio.checked = radio.value === currentLanguage;
+            });
+            updateLanguage();
+        });
+
+        function switchTab(tabName) {
+            // 更新标签状态
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // 激活选中的标签
+            const selectedTab = document.querySelector(`.tab:nth-child(${tabName === 'convert' ? '1' : '2'})`);
+            const selectedContent = document.getElementById(`${tabName}Tab`);
+            selectedTab.classList.add('active');
+            selectedContent.classList.add('active');
+        }
+
+        async function compareFiles() {
+            const file1 = document.getElementById('csvFile1').files[0];
+            const file2 = document.getElementById('csvFile2').files[0];
+            const format1 = document.getElementById('format1').value;
+            const format2 = document.getElementById('format2').value;
+
+            if (!file1 || !file2) {
+                alert(t('messages.selectFiles'));
+                return;
+            }
+
+            try {
+                const content1 = await readFileContent(file1);
+                const content2 = await readFileContent(file2);
+
+                const data1 = normalizePasswordData(content1, format1);
+                const data2 = normalizePasswordData(content2, format2);
+
+                const differences = findDifferences(data1, data2);
+                displayDifferences(differences, file1.name, file2.name);
+            } catch (error) {
+                console.error(t('messages.compareError'), error);
+                alert(t('messages.compareError') + error.message);
+            }
+        }
+
+        function readFileContent(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.onerror = e => reject(new Error('读取文件失败'));
+                reader.readAsText(file);
+            });
+        }
+
+        function normalizePasswordData(csvContent, format) {
+            const lines = parseCSV(csvContent);
+            const data = lines.slice(1); // 跳过标题行
+            const result = [];
+
+            data.forEach(row => {
+                if (format === 'bitwarden') {
+                    if (row.length >= 10) {
+                        result.push({
+                            url: row[7] || '',
+                            username: row[8] || '',
+                            password: row[9] || '',
+                            name: row[3] || ''
+                        });
+                    }
+                } else { // edge
+                    if (row.length >= 4) {
+                        result.push({
+                            url: row[1] || '',
+                            username: row[2] || '',
+                            password: row[3] || '',
+                            name: row[0] || ''
+                        });
+                    }
+                }
+            });
+
+            return result;
+        }
+
+        function findDifferences(data1, data2) {
+            const differences = [];
+            
+            // 创建查找索引
+            const index2 = new Map();
+            data2.forEach(item => {
+                const key = `${item.url}|${item.username}`;
+                index2.set(key, item);
+            });
+
+            // 检查第一个数据集中的每个条目
+            data1.forEach(item1 => {
+                const key = `${item1.url}|${item1.username}`;
+                const item2 = index2.get(key);
+
+                if (item2) {
+                    // URL和用户名匹配，但密码不同
+                    if (item1.password !== item2.password) {
+                        differences.push({
+                            type: 'password_mismatch',
+                            url: item1.url,
+                            username: item1.username,
+                            name1: item1.name,
+                            name2: item2.name,
+                            password1: item1.password,
+                            password2: item2.password
+                        });
+                    }
+                }
+            });
+
+            return differences;
+        }
+
+        function displayDifferences(differences, fileName1, fileName2) {
+            const resultDiv = document.getElementById('compareResult');
+            resultDiv.style.display = 'block';
+            
+            const messages = {
+                zh: {
+                    noMismatch: '没有发现密码不匹配的记录。',
+                    foundMismatch: '发现以下密码不匹配：',
+                    username: '用户名',
+                    record: '记录',
+                    name: '名称',
+                    password: '密码'
+                },
+                en: {
+                    noMismatch: 'No password mismatches found.',
+                    foundMismatch: 'Found the following password mismatches:',
+                    username: 'Username',
+                    record: 'Record',
+                    name: 'Name',
+                    password: 'Password'
+                }
+            };
+
+            if (differences.length === 0) {
+                resultDiv.innerHTML = `<div class="warning">${t('compare.noMismatch')}</div>`;
+                return;
+            }
+
+            let html = `<h3>${t('compare.foundMismatch')}</h3>`;
+            differences.forEach(diff => {
+                if (diff.type === 'password_mismatch') {
+                    html += `
+                        <div class="warning">
+                            <div class="warning-title">URL: ${diff.url}</div>
+                            <div>${t('compare.username')}: ${diff.username}</div>
+                            <div>${t('compare.record')}1 (${fileName1}): ${diff.name1 ? `${t('compare.name')}: ${diff.name1}, ` : ''}${t('compare.password')}: ${diff.password1}</div>
+                            <div>${t('compare.record')}2 (${fileName2}): ${diff.name2 ? `${t('compare.name')}: ${diff.name2}, ` : ''}${t('compare.password')}: ${diff.password2}</div>
+                        </div>
+                    `;
+                }
+            });
+            
+            resultDiv.innerHTML = html;
+        }
+
+        function convertFile() {
+            const fileInput = document.getElementById('csvFile');
+            const sourceFormat = document.getElementById('sourceFormat').value;
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert(t('messages.selectFile'));
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                const converted = convertFormat(text, sourceFormat);
+                downloadCSV(converted, `converted_${sourceFormat === 'bitwarden' ? 'edge' : 'bitwarden'}_${file.name}`);
+            };
+            reader.readAsText(file);
+        }
+
+        function parseCSV(text) {
+            const result = [];
+            let row = [];
+            let inQuotes = false;
+            let currentValue = '';
+            
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                const nextChar = text[i + 1];
+                
+                if (char === '"') {
+                    if (inQuotes && nextChar === '"') {
+                        // 处理转义的双引号
+                        currentValue += '"';
+                        i++; // 跳过下一个引号
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                } else if (char === ',' && !inQuotes) {
+                    row.push(currentValue);
+                    currentValue = '';
+                } else if ((char === '\n' || char === '\r') && !inQuotes) {
+                    if (currentValue || row.length > 0) {
+                        row.push(currentValue);
+                        result.push(row);
+                        row = [];
+                        currentValue = '';
+                    }
+                    // 跳过 \r\n 中的 \n
+                    if (char === '\r' && nextChar === '\n') {
+                        i++;
+                    }
+                } else {
+                    currentValue += char;
+                }
+            }
+            
+            // 处理最后一个值和行
+            if (currentValue || row.length > 0) {
+                row.push(currentValue);
+                result.push(row);
+            }
+            
+            return result;
+        }
+
+        function escapeCSVField(field) {
+            if (field.includes('"') || field.includes(',') || field.includes('\n') || field.includes('\r')) {
+                // 将字段中的双引号替换为两个双引号，并用双引号包裹整个字段
+                return '"' + field.replace(/"/g, '""') + '"';
+            }
+            return field;
+        }
+
+        function convertFormat(csvText, sourceFormat) {
+            // 解析CSV
+            const lines = parseCSV(csvText);
+            const headers = lines[0];
+            const data = lines.slice(1);
+
+            let result = [];
+
+            if (sourceFormat === 'bitwarden') {
+                // Bitwarden 转 Edge
+                result.push(['name', 'url', 'username', 'password', 'note'].map(escapeCSVField).join(','));
+                
+                data.forEach(row => {
+                    if (row.length < 10) return; // 跳过无效行
+                    const name = row[3] || '';
+                    const url = row[7] || '';
+                    const username = row[8] || '';
+                    const password = row[9] || '';
+                    const notes = row[4] || '';
+                    result.push([name, url, username, password, notes].map(escapeCSVField).join(','));
+                });
+            } else {
+                // Edge 转 Bitwarden
+                result.push(['folder', 'favorite', 'type', 'name', 'notes', 'fields', 'reprompt', 'login_uri', 'login_username', 'login_password', 'login_totp'].map(escapeCSVField).join(','));
+                
+                data.forEach(row => {
+                    if (row.length < 4) return; // 跳过无效行
+                    const newRow = [
+                        '', // folder
+                        '', // favorite
+                        'login', // type
+                        row[0] || '', // name
+                        row[4] || '', // notes
+                        '', // fields
+                        '0', // reprompt
+                        row[1] || '', // login_uri
+                        row[2] || '', // login_username
+                        row[3] || '', // login_password
+                        '' // login_totp
+                    ];
+                    result.push(newRow.map(escapeCSVField).join(','));
+                });
+            }
+
+            return result.join('\n');
+        }
+
+        function downloadCSV(content, filename) {
+            const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            if (navigator.msSaveBlob) {
+                navigator.msSaveBlob(blob, filename);
+                return;
+            }
+            link.href = window.URL.createObjectURL(blob);
+            link.download = filename;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
