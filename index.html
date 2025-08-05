@@ -398,6 +398,35 @@
             });
         }
 
+        function parseLoginUris(uriString) {
+            // 如果字符串为空，返回空数组
+            if (!uriString) return [''];
+            
+            const result = [];
+            let currentUri = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < uriString.length; i++) {
+                const char = uriString[i];
+                
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(currentUri.trim());
+                    currentUri = '';
+                } else {
+                    currentUri += char;
+                }
+            }
+            
+            if (currentUri) {
+                result.push(currentUri.trim());
+            }
+            
+            // 移除多余的引号
+            return result.map(uri => uri.replace(/^"(.*)"$/, '$1').trim());
+        }
+
         function normalizePasswordData(csvContent, format) {
             const lines = parseCSV(csvContent);
             const data = lines.slice(1); // 跳过标题行
@@ -406,11 +435,15 @@
             data.forEach(row => {
                 if (format === 'bitwarden') {
                     if (row.length >= 10) {
-                        result.push({
-                            url: row[7] || '',
-                            username: row[8] || '',
-                            password: row[9] || '',
-                            name: row[3] || ''
+                        const uris = parseLoginUris(row[7]);
+                        // 为每个 URI 创建一条记录
+                        uris.forEach(uri => {
+                            result.push({
+                                url: uri,
+                                username: row[8] || '',
+                                password: row[9] || '',
+                                name: row[3] || ''
+                            });
                         });
                     }
                 } else { // edge
@@ -595,11 +628,15 @@
                 data.forEach(row => {
                     if (row.length < 10) return; // 跳过无效行
                     const name = row[3] || '';
-                    const url = row[7] || '';
+                    const urls = parseLoginUris(row[7]); // 使用parseLoginUris解析多个URL
                     const username = row[8] || '';
                     const password = row[9] || '';
                     const notes = row[4] || '';
-                    result.push([name, url, username, password, notes].map(escapeCSVField).join(','));
+                    
+                    // 为每个URL创建一条记录
+                    urls.forEach(url => {
+                        result.push([name, url, username, password, notes].map(escapeCSVField).join(','));
+                    });
                 });
             } else {
                 // Edge 转 Bitwarden
