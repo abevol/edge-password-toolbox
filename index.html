@@ -76,22 +76,40 @@
         .tabs {
             display: flex;
             margin-bottom: 20px;
-            border-bottom: 1px solid #ddd;
+            border-bottom: 2px solid #4CAF50;
+            justify-content: center;
+            gap: 10px;
         }
         .tab {
-            padding: 10px 20px;
+            padding: 12px 25px;
             cursor: pointer;
-            border: 1px solid transparent;
+            border: 2px solid #ddd;
             border-bottom: none;
-            margin-bottom: -1px;
-            background-color: transparent;
-            color: #666;
+            margin-bottom: 0px;
+            background-color: #f5f5f5;
+            color: #555;
+            font-weight: bold;
+            font-size: 16px;
+            border-radius: 8px 8px 0 0;
+            transition: all 0.3s ease;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.05);
+            text-align: center;
+            min-width: 160px;
+            transform: translateY(0px);
+        }
+        .tab:hover {
+            background-color: #e8f5e9;
+            color: #2e7d32;
         }
         .tab.active {
-            border-color: #ddd;
+            border-color: #4CAF50;
             border-bottom-color: white;
+            border-bottom: none;
+            margin-bottom: -2px;
             background-color: white;
-            color: #333;
+            color: #2e7d32;
+            box-shadow: 0 -3px 6px rgba(0,0,0,0.1);
+            transform: translateY(0);
         }
         .tab-content {
             display: none;
@@ -256,7 +274,7 @@
                     sourceFormat: '源文件平台格式：',
                     selectFile: '选择密码文件：',
                     convert: '转换',
-                    detectedFormat: '检测到的文件格式',
+                    detectedFormat: '检测到文件格式',
                     formatBitwarden: 'Bitwarden',
                     formatEdge: 'Microsoft Edge',
                     formatUnknown: '未知'
