@@ -398,6 +398,18 @@
             });
         }
 
+        function extractDomainFromUrl(url) {
+            try {
+                // 尝试使用 URL 构造函数解析 URL
+                const urlObj = new URL(url);
+                return urlObj.hostname;
+            } catch (e) {
+                // 如果 URL 无效，尝试使用简单的正则表达式提取域名
+                const match = url.match(/^(?:https?:\/\/)?([^\/]+)/i);
+                return match ? match[1] : url;
+            }
+        }
+
         function parseLoginUris(uriString) {
             // 如果字符串为空，返回空数组
             if (!uriString) return [''];
@@ -627,7 +639,6 @@
                 
                 data.forEach(row => {
                     if (row.length < 10) return; // 跳过无效行
-                    const name = row[3] || '';
                     const urls = parseLoginUris(row[7]); // 使用parseLoginUris解析多个URL
                     const username = row[8] || '';
                     const password = row[9] || '';
@@ -635,6 +646,8 @@
                     
                     // 为每个URL创建一条记录
                     urls.forEach(url => {
+                        // 从 URL 提取域名作为 name
+                        const name = extractDomainFromUrl(url);
                         result.push([name, url, username, password, notes].map(escapeCSVField).join(','));
                     });
                 });
