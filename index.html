@@ -257,9 +257,9 @@
                     selectFile: '选择密码文件：',
                     convert: '转换',
                     detectedFormat: '检测到的文件格式',
-                    formatBitwarden: 'Bitwarden 格式',
-                    formatEdge: 'Microsoft Edge 格式',
-                    formatUnknown: '未知格式'
+                    formatBitwarden: 'Bitwarden',
+                    formatEdge: 'Microsoft Edge',
+                    formatUnknown: '未知'
                 },
                 compare: {
                     description: '对比两个不同的 CSV 密码文件，找出密码不一致的记录，方便在将密码导入另一平台之前进行检查修改以避免引起冲突；亦可同文件自比以自我检查。',
@@ -294,9 +294,9 @@
                     selectFile: 'Select Password File:',
                     convert: 'Convert',
                     detectedFormat: 'Detected Format',
-                    formatBitwarden: 'Bitwarden Format',
-                    formatEdge: 'Microsoft Edge Format',
-                    formatUnknown: 'Unknown Format'
+                    formatBitwarden: 'Bitwarden',
+                    formatEdge: 'Microsoft Edge',
+                    formatUnknown: 'Unknown'
                 },
                 compare: {
                     description: 'Compare CSV password files to find inconsistent records, helping you check and modify passwords before importing to another platform without conflicts; also supports self-checking by comparing a file with itself.',
@@ -602,10 +602,13 @@
                     formatInfo.style.display = 'block';
                     
                     if (format === 'bitwarden') {
+                        detectedFormatSpan.setAttribute('data-i18n', 'convert.formatBitwarden');
                         detectedFormatSpan.textContent = t('convert.formatBitwarden');
                     } else if (format === 'edge') {
+                        detectedFormatSpan.setAttribute('data-i18n', 'convert.formatEdge');
                         detectedFormatSpan.textContent = t('convert.formatEdge');
                     } else {
+                        detectedFormatSpan.setAttribute('data-i18n', 'convert.formatUnknown');
                         detectedFormatSpan.textContent = t('convert.formatUnknown');
                     }
                     
