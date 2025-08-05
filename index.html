@@ -164,6 +164,18 @@
             font-weight: 500;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
+        .format-info {
+            margin-top: 8px;
+            padding: 8px 12px;
+            background-color: #e8f5e9;
+            border-radius: 4px;
+            color: #2e7d32;
+            font-weight: 500;
+        }
+        .format-info::before {
+            content: '🔍';
+            margin-right: 8px;
+        }
     </style>
 </head>
 <body>
@@ -185,15 +197,11 @@
         <div id="convertTab" class="tab-content active">
             <div class="tab-description" data-i18n="convert.description"></div>
             <div class="form-group">
-                <label for="sourceFormat" data-i18n="convert.sourceFormat"></label>
-                <select id="sourceFormat">
-                    <option value="bitwarden">Bitwarden</option>
-                    <option value="edge">Microsoft Edge</option>
-                </select>
-            </div>
-            <div class="form-group">
                 <label for="csvFile" data-i18n="convert.selectFile"></label>
-                <input type="file" id="csvFile" accept=".csv">
+                <input type="file" id="csvFile" accept=".csv" onchange="detectFileFormat(this)">
+                <div id="formatInfo" class="format-info" style="display: none;">
+                    <span data-i18n="convert.detectedFormat"></span>: <span id="detectedFormat"></span>
+                </div>
             </div>
             <button onclick="convertFile()" data-i18n="convert.convert"></button>
             <div id="convertResult" style="display: none;">
@@ -208,19 +216,17 @@
             <div class="tab-description" data-i18n="compare.description"></div>
             <div class="form-group">
                 <label class="file-label" data-i18n="compare.file1"></label>
-                <select id="format1">
-                    <option value="bitwarden" selected>Bitwarden</option>
-                    <option value="edge">Microsoft Edge</option>
-                </select>
-                <input type="file" id="csvFile1" accept=".csv">
+                <input type="file" id="csvFile1" accept=".csv" onchange="detectFileFormat(this, 'formatInfo1', 'detectedFormat1')">
+                <div id="formatInfo1" class="format-info" style="display: none;">
+                    <span data-i18n="convert.detectedFormat"></span>: <span id="detectedFormat1"></span>
+                </div>
             </div>
             <div class="form-group">
                 <label class="file-label" data-i18n="compare.file2"></label>
-                <select id="format2">
-                    <option value="bitwarden">Bitwarden</option>
-                    <option value="edge" selected>Microsoft Edge</option>
-                </select>
-                <input type="file" id="csvFile2" accept=".csv">
+                <input type="file" id="csvFile2" accept=".csv" onchange="detectFileFormat(this, 'formatInfo2', 'detectedFormat2')">
+                <div id="formatInfo2" class="format-info" style="display: none;">
+                    <span data-i18n="convert.detectedFormat"></span>: <span id="detectedFormat2"></span>
+                </div>
             </div>
             <button onclick="compareFiles()" data-i18n="compare.compare"></button>
             <div id="compareResult" style="display: none;">
@@ -249,7 +255,11 @@
                     description: '将 CSV 密码文件在不同平台格式之间进行转换。目前支持在 Bitwarden 和 Microsoft Edge 之间互相转换。',
                     sourceFormat: '源文件平台格式：',
                     selectFile: '选择密码文件：',
-                    convert: '转换'
+                    convert: '转换',
+                    detectedFormat: '检测到的文件格式',
+                    formatBitwarden: 'Bitwarden 格式',
+                    formatEdge: 'Microsoft Edge 格式',
+                    formatUnknown: '未知格式'
                 },
                 compare: {
                     description: '对比两个不同的 CSV 密码文件，找出密码不一致的记录，方便在将密码导入另一平台之前进行检查修改以避免引起冲突；亦可同文件自比以自我检查。',
@@ -267,7 +277,8 @@
                     selectFile: '请选择一个CSV文件',
                     selectFiles: '请选择两个要对比的文件',
                     compareError: '对比文件时出错: ',
-                    noUrl: '发现以下记录不存在 URL 字段，它们将不会被 Edge 识别和导入：'
+                    noUrl: '发现以下记录不存在 URL 字段，它们将不会被 Edge 识别和导入：',
+                    formatError: '无法识别文件格式，请确保上传的是有效的 Bitwarden 或 Microsoft Edge 密码文件'
                 }
             },
             en: {
@@ -281,7 +292,11 @@
                     description: 'Convert CSV password files between different platforms. Currently supports conversion between Bitwarden and Microsoft Edge.',
                     sourceFormat: 'Source Platform Format:',
                     selectFile: 'Select Password File:',
-                    convert: 'Convert'
+                    convert: 'Convert',
+                    detectedFormat: 'Detected Format',
+                    formatBitwarden: 'Bitwarden Format',
+                    formatEdge: 'Microsoft Edge Format',
+                    formatUnknown: 'Unknown Format'
                 },
                 compare: {
                     description: 'Compare CSV password files to find inconsistent records, helping you check and modify passwords before importing to another platform without conflicts; also supports self-checking by comparing a file with itself.',
@@ -299,7 +314,8 @@
                     selectFile: 'Please select a CSV file',
                     selectFiles: 'Please select two files to compare',
                     compareError: 'Error comparing files: ',
-                    noUrl: 'The following records have no URL field and will not be recognized and imported by Edge:'
+                    noUrl: 'The following records have no URL field and will not be recognized and imported by Edge:',
+                    formatError: 'Unable to recognize file format, please ensure you upload a valid Bitwarden or Microsoft Edge password file'
                 }
             }
         };
@@ -378,13 +394,22 @@
         }
 
         async function compareFiles() {
-            const file1 = document.getElementById('csvFile1').files[0];
-            const file2 = document.getElementById('csvFile2').files[0];
-            const format1 = document.getElementById('format1').value;
-            const format2 = document.getElementById('format2').value;
-
+            const fileInput1 = document.getElementById('csvFile1');
+            const fileInput2 = document.getElementById('csvFile2');
+            const file1 = fileInput1.files[0];
+            const file2 = fileInput2.files[0];
+            
             if (!file1 || !file2) {
                 alert(t('messages.selectFiles'));
+                return;
+            }
+            
+            // 获取检测到的格式
+            const format1 = fileInput1.getAttribute('data-format');
+            const format2 = fileInput2.getAttribute('data-format');
+            
+            if (!format1 || format1 === 'unknown' || !format2 || format2 === 'unknown') {
+                alert(t('messages.formatError'));
                 return;
             }
 
@@ -557,13 +582,90 @@
             mismatchList.innerHTML = html;
         }
 
+        // 检测文件格式的函数
+        function detectFileFormat(fileInput, formatInfoId = 'formatInfo', detectedFormatId = 'detectedFormat') {
+            const file = fileInput.files[0];
+            if (!file) {
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                const format = detectFormat(text);
+                
+                // 显示检测到的格式
+                const formatInfo = document.getElementById(formatInfoId);
+                const detectedFormatSpan = document.getElementById(detectedFormatId);
+                
+                if (formatInfo && detectedFormatSpan) {
+                    formatInfo.style.display = 'block';
+                    
+                    if (format === 'bitwarden') {
+                        detectedFormatSpan.textContent = t('convert.formatBitwarden');
+                    } else if (format === 'edge') {
+                        detectedFormatSpan.textContent = t('convert.formatEdge');
+                    } else {
+                        detectedFormatSpan.textContent = t('convert.formatUnknown');
+                    }
+                    
+                    // 保存检测到的格式到文件输入元素的自定义属性中
+                    fileInput.setAttribute('data-format', format);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // 检测CSV文件格式的函数
+        function detectFormat(csvText) {
+            try {
+                const lines = parseCSV(csvText);
+                if (lines.length === 0) {
+                    return 'unknown';
+                }
+                
+                const headers = lines[0];
+                
+                // 检查是否为Bitwarden格式
+                if (headers.length >= 10 && 
+                    headers.includes('folder') && 
+                    headers.includes('type') && 
+                    headers.includes('login_uri') && 
+                    headers.includes('login_username') && 
+                    headers.includes('login_password')) {
+                    return 'bitwarden';
+                }
+                
+                // 检查是否为Edge格式
+                if (headers.length >= 4 && 
+                    headers.includes('name') && 
+                    headers.includes('url') && 
+                    headers.includes('username') && 
+                    headers.includes('password')) {
+                    return 'edge';
+                }
+                
+                return 'unknown';
+            } catch (error) {
+                console.error('Error detecting format:', error);
+                return 'unknown';
+            }
+        }
+
         function convertFile() {
             const fileInput = document.getElementById('csvFile');
-            const sourceFormat = document.getElementById('sourceFormat').value;
             const file = fileInput.files[0];
 
             if (!file) {
                 alert(t('messages.selectFile'));
+                return;
+            }
+
+            // 获取检测到的格式
+            const sourceFormat = fileInput.getAttribute('data-format');
+            
+            if (!sourceFormat || sourceFormat === 'unknown') {
+                alert(t('messages.formatError'));
                 return;
             }
 
@@ -703,6 +805,10 @@
                     ];
                     result.push(newRow.map(escapeCSVField).join(','));
                 });
+                
+                // Edge 转 Bitwarden 时隐藏 convertResult
+                const convertResult = document.getElementById('convertResult');
+                convertResult.style.display = 'none';
             }
 
             return result.join('\n');
