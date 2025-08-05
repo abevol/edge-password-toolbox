@@ -67,12 +67,11 @@
         button:hover {
             background-color: #45a049;
         }
-        #result, #compareResult {
+        #convertResult, #compareResult {
             margin-top: 20px;
             padding: 10px;
             border: 1px solid #ddd;
             border-radius: 4px;
-            display: none;
         }
         .tabs {
             display: flex;
@@ -197,7 +196,12 @@
                 <input type="file" id="csvFile" accept=".csv">
             </div>
             <button onclick="convertFile()" data-i18n="convert.convert"></button>
-            <div id="result"></div>
+            <div id="convertResult" style="display: none;">
+                <div class="warning-title" data-i18n="messages.noUrl"></div>
+                <div class="warning">
+                    <div id="noUrlRecordsList"></div>
+                </div>
+            </div>
         </div>
 
         <div id="compareTab" class="tab-content">
@@ -219,7 +223,15 @@
                 <input type="file" id="csvFile2" accept=".csv">
             </div>
             <button onclick="compareFiles()" data-i18n="compare.compare"></button>
-            <div id="compareResult"></div>
+            <div id="compareResult" style="display: none;">
+                <div id="noMismatchDiv" style="display: none;">
+                    <div class="warning" data-i18n="compare.noMismatch"></div>
+                </div>
+                <div id="hasMismatchDiv" style="display: none;">
+                    <div class="warning-title" data-i18n="compare.foundMismatch"></div>
+                    <div id="mismatchList"></div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -254,7 +266,8 @@
                 messages: {
                     selectFile: '请选择一个CSV文件',
                     selectFiles: '请选择两个要对比的文件',
-                    compareError: '对比文件时出错: '
+                    compareError: '对比文件时出错: ',
+                    noUrl: '发现以下记录不存在 URL 字段，它们将不会被 Edge 识别和导入：'
                 }
             },
             en: {
@@ -285,7 +298,8 @@
                 messages: {
                     selectFile: 'Please select a CSV file',
                     selectFiles: 'Please select two files to compare',
-                    compareError: 'Error comparing files: '
+                    compareError: 'Error comparing files: ',
+                    noUrl: 'The following records have no URL field and will not be recognized and imported by Edge:'
                 }
             }
         };
@@ -508,34 +522,25 @@
         }
 
         function displayDifferences(differences, fileName1, fileName2) {
-            const resultDiv = document.getElementById('compareResult');
-            resultDiv.style.display = 'block';
+            const compareResult = document.getElementById('compareResult');
+            const noMismatchDiv = document.getElementById('noMismatchDiv');
+            const hasMismatchDiv = document.getElementById('hasMismatchDiv');
+            const mismatchList = document.getElementById('mismatchList');
+
+            // 显示结果区域
+            compareResult.style.display = 'block';
             
-            const messages = {
-                zh: {
-                    noMismatch: '没有发现密码不匹配的记录。',
-                    foundMismatch: '发现以下密码不匹配：',
-                    username: '用户名',
-                    record: '记录',
-                    name: '名称',
-                    password: '密码'
-                },
-                en: {
-                    noMismatch: 'No password mismatches found.',
-                    foundMismatch: 'Found the following password mismatches:',
-                    username: 'Username',
-                    record: 'Record',
-                    name: 'Name',
-                    password: 'Password'
-                }
-            };
+            // 隐藏所有子区域
+            noMismatchDiv.style.display = 'none';
+            hasMismatchDiv.style.display = 'none';
 
             if (differences.length === 0) {
-                resultDiv.innerHTML = `<div class="warning">${t('compare.noMismatch')}</div>`;
+                noMismatchDiv.style.display = 'block';
                 return;
             }
 
-            let html = `<h3>${t('compare.foundMismatch')}</h3>`;
+            hasMismatchDiv.style.display = 'block';
+            let html = '';
             differences.forEach(diff => {
                 if (diff.type === 'password_mismatch') {
                     html += `
@@ -549,7 +554,7 @@
                 }
             });
             
-            resultDiv.innerHTML = html;
+            mismatchList.innerHTML = html;
         }
 
         function convertFile() {
@@ -637,20 +642,46 @@
                 // Bitwarden 转 Edge
                 result.push(['name', 'url', 'username', 'password', 'note'].map(escapeCSVField).join(','));
                 
+                const noUrlRecords = [];
+                
                 data.forEach(row => {
                     if (row.length < 10) return; // 跳过无效行
                     const urls = parseLoginUris(row[7]); // 使用parseLoginUris解析多个URL
                     const username = row[8] || '';
                     const password = row[9] || '';
                     const notes = row[4] || '';
+                    const name = row[3] || '';
+                    
+                    // 检查是否存在有效的 URL
+                    if (!urls[0]) {
+                        noUrlRecords.push({ name, username });
+                        return;
+                    }
                     
                     // 为每个URL创建一条记录
                     urls.forEach(url => {
                         // 从 URL 提取域名作为 name
-                        const name = extractDomainFromUrl(url);
-                        result.push([name, url, username, password, notes].map(escapeCSVField).join(','));
+                        const urlName = extractDomainFromUrl(url);
+                        result.push([urlName, url, username, password, notes].map(escapeCSVField).join(','));
                     });
                 });
+                
+                // 获取结果元素
+                const convertResult = document.getElementById('convertResult');
+                const recordsList = document.getElementById('noUrlRecordsList');
+                
+                // 如果有没有 URL 的记录，显示警告
+                if (noUrlRecords.length > 0) {
+                    convertResult.style.display = 'block';
+                    let html = '';
+                    noUrlRecords.forEach(record => {
+                        html += `<div>${record.name ? `${t('compare.name')}: ${record.name}, ` : ''}${t('compare.username')}: ${record.username}</div>`;
+                    });
+                    recordsList.innerHTML = html;
+                } else {
+                    // 如果没有无 URL 记录，隐藏结果
+                    convertResult.style.display = 'none';
+                }
             } else {
                 // Edge 转 Bitwarden
                 result.push(['folder', 'favorite', 'type', 'name', 'notes', 'fields', 'reprompt', 'login_uri', 'login_username', 'login_password', 'login_totp'].map(escapeCSVField).join(','));
@@ -693,4 +724,5 @@
         }
     </script>
 </body>
+</html>
 </html>
