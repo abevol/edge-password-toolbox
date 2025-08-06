@@ -1,13 +1,16 @@
 # Edge 密码工具箱 | Edge Password Toolbox
 
-一个简单但实用的网页工具，用于在 Microsoft Edge 和 Bitwarden 之间转换和对比 CSV 格式的密码文件。
+一个简单但实用的网页工具，用于在 Microsoft Edge（兼容 Google Chrome）和 Bitwarden 之间转换和对比 CSV 格式的密码文件。
 
 🌐 在线使用：[https://abevol.github.io/edge-password-toolbox/](https://abevol.github.io/edge-password-toolbox/)
 
 ## 特色
+- 🔑 支持 Microsoft Edge（兼容 Google Chrome）和 Bitwarden 平台的密码文件
 - 🛡️ 纯前端实现，所有数据处理在本地完成，无需上传到服务器，安全可靠
 - 🌍 支持中文和英文界面
 - 🎨 简洁直观的用户界面
+- 🔍 自动检测文件格式
+- 📢 完善的信息提醒
 
 ## 功能特点
 
@@ -17,6 +20,7 @@
 - 自动处理 CSV 格式的特殊字符
 - 支持批量转换
 - 支持多 URI 的解析和拆分
+- 显示因缺失 URI 而无法被导入到 Edge 的记录
 
 ### 2. 密码对比
 - 对比两个不同平台的密码文件
